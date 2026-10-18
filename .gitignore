@@ -1,0 +1,24 @@
+# Python-generated temporary files
+__pycache__/
+*.pyc
+
+# Local Python environments
+.venv/
+venv/
+
+# Customer dataset
+tourism.csv
+data/
+
+# Generated model and evaluation artifacts
+artifacts/
+*.joblib
+
+# MLflow local tracking files
+mlflow.db
+mlruns/
+mlartifacts/
+
+# Credentials and secrets
+.env
+.env.*
