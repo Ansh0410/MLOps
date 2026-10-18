@@ -1,0 +1,49 @@
+
+# ============================================================
+# VISIT WITH US - MLOPS CI/CD
+# Purpose: Automate the customer purchase prediction pipeline
+# ============================================================
+
+name: Tourism ML Pipeline
+
+# Allow the workflow to be started manually.
+on:
+  workflow_dispatch:
+
+# The workflow only needs to read repository contents.
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+
+    # GitHub creates a temporary Ubuntu runner.
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Step 1: Copy source code from GitHub to the runner.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Install Python.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Step 3: Install the packages required by our scripts.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      # Step 4: Confirm that our Python scripts are present.
+      - name: Verify project files
+        run: |
+          test -f data_register.py
+          test -f prep.py
+          test -f train.py
+          test -f evaluate.py
+          test -f mlflow_tracking.py
+          echo "All required Python scripts are available."
