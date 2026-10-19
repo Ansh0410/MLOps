@@ -1,44 +1,34 @@
-
-# ============================================================
-# VISIT WITH US - MLOPS CI/CD
-# Purpose: Automate the customer purchase prediction pipeline
-# ============================================================
-
 name: Tourism ML Pipeline
 
-# Allow the workflow to be started manually.
+# Manual execution from GitHub Actions.
 on:
   workflow_dispatch:
 
-# The workflow only needs to read repository contents.
 permissions:
   contents: read
 
 jobs:
   build-and-test:
-
-    # GitHub creates a temporary Ubuntu runner.
     runs-on: ubuntu-latest
 
     steps:
-
-      # Step 1: Copy source code from GitHub to the runner.
-      - name: Checkout repository
+      # STEP 1: Download public source code.
+      - name: Checkout public repository
         uses: actions/checkout@v4
 
-      # Step 2: Install Python.
+      # STEP 2: Configure Python.
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # Step 3: Install the packages required by our scripts.
+      # STEP 3: Install dependencies.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      # Step 4: Confirm that our Python scripts are present.
+      # STEP 4: Verify source-code files.
       - name: Verify project files
         run: |
           test -f data_register.py
@@ -46,4 +36,38 @@ jobs:
           test -f train.py
           test -f evaluate.py
           test -f mlflow_tracking.py
-          echo "All required Python scripts are available."
+
+      # STEP 5: Securely retrieve the private dataset.
+      - name: Checkout private dataset
+        uses: actions/checkout@v4
+        with:
+          repository: Ansh0410/tourism-data-private
+          ref: main
+          token: ${{ secrets.TOURISM_DATA_TOKEN }}
+          path: private-data
+          persist-credentials: false
+
+      # STEP 6: Place CSV where our Python script expects it.
+      - name: Prepare dataset
+        run: |
+          test -f private-data/tourism.csv
+          cp private-data/tourism.csv tourism.csv
+          echo "Dataset successfully retrieved."
+
+      # STEP 7: Execute dataset registration.
+      - name: Register dataset
+        run: |
+          python data_register.py
+
+      # STEP 8: Verify registration artifact.
+      - name: Verify registration result
+        run: |
+          test -f artifacts/dataset_metadata.json
+          echo "Dataset registration completed successfully."
+
+      # STEP 9: Remove local dataset copies.
+      - name: Clean up customer data
+        if: always()
+        run: |
+          rm -f tourism.csv
+          rm -rf private-data
