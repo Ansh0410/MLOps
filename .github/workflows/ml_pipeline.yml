@@ -65,6 +65,15 @@ jobs:
         run: python mlflow_tracking.py
 
       # 11. Check that important outputs exist.
+
+      - name: Create model version manifest
+        run: python create_model_manifest.py
+
+      - name: Verify model manifest
+        run: |
+          test -f reports/model_manifest.json
+          echo "Model version metadata generated."
+
       - name: Verify pipeline outputs
         run: |
           test -f artifacts/dataset_metadata.json
