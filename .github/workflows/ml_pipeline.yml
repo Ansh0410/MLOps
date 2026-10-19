@@ -80,6 +80,15 @@ jobs:
           test -f artifacts/models/best_tourism_model.joblib
           test -f artifacts/models/model_comparison.csv
           echo "ML pipeline completed successfully."
+          
+      - name: Upload model manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: tourism-model-manifest
+          path: reports/model_manifest.json
+          retention-days: 7
+          if-no-files-found: error
+
 
       # 12. Remove customer-level data from runner.
       - name: Clean up customer data
