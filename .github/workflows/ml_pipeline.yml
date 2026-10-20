@@ -1,14 +1,8 @@
 name: Tourism ML Pipeline
 
-# Run manually from GitHub Actions.
+# Manual execution from GitHub Actions.
 on:
   workflow_dispatch:
-    inputs:
-      publish_model:
-        description: "Publish trained model to private registry?"
-        required: true
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -18,23 +12,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Retrieve public source code.
+      # STEP 1: Download public source code.
       - name: Checkout public repository
         uses: actions/checkout@v4
 
-      # 2. Configure Python environment.
+      # STEP 2: Configure Python.
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # 3. Install required Python libraries.
+      # STEP 3: Install dependencies.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      # 4. Download the dataset securely.
+      # STEP 4: Verify source-code files.
+      - name: Verify project files
+        run: |
+          test -f data_register.py
+          test -f prep.py
+          test -f train.py
+          test -f evaluate.py
+          test -f mlflow_tracking.py
+
+      # STEP 5: Securely retrieve the private dataset.
       - name: Checkout private dataset
         uses: actions/checkout@v4
         with:
@@ -44,70 +47,27 @@ jobs:
           path: private-data
           persist-credentials: false
 
-      # 5. Copy dataset to expected input location.
+      # STEP 6: Place CSV where our Python script expects it.
       - name: Prepare dataset
         run: |
           test -f private-data/tourism.csv
           cp private-data/tourism.csv tourism.csv
+          echo "Dataset successfully retrieved."
 
-      # 6. Register and validate original dataset.
+      # STEP 7: Execute dataset registration.
       - name: Register dataset
-        run: python data_register.py
-
-      # 7. Clean data and create train/test splits.
-      - name: Preprocess dataset
-        run: python prep.py
-
-      # 8. Train and compare candidate models.
-      - name: Train models
-        run: python train.py
-
-      # 9. Evaluate selected model on test data.
-      - name: Evaluate model
-        run: python evaluate.py
-
-      # 10. Log experiment information to MLflow.
-      - name: Track experiments
-        run: python mlflow_tracking.py
-
-      # 11. Check that important outputs exist.
-
-      - name: Create model version manifest
-        run: python create_model_manifest.py
-
-      - name: Verify model manifest
         run: |
-          test -f reports/model_manifest.json
-          echo "Model version metadata generated."
+          python data_register.py
 
-      - name: Verify pipeline outputs
+      # STEP 8: Verify registration artifact.
+      - name: Verify registration result
         run: |
           test -f artifacts/dataset_metadata.json
-          test -f artifacts/models/best_tourism_model.joblib
-          test -f artifacts/models/model_comparison.csv
-          echo "ML pipeline completed successfully."
-          
-      - name: Upload model manifest
-        uses: actions/upload-artifact@v4
-        with:
-          name: tourism-model-manifest
-          path: reports/model_manifest.json
-          retention-days: 7
-          if-no-files-found: error
+          echo "Dataset registration completed successfully."
 
-
-      # 12. Remove customer-level data from runner.
-
-      # Publish only when explicitly selected.
-      - name: Publish versioned model
-        if: ${{ inputs.publish_model == true }}
-        env:
-          MODEL_REGISTRY_TOKEN: ${{ secrets.MODEL_REGISTRY_TOKEN }}
-        run: python publish_model.py
-
+      # STEP 9: Remove local dataset copies.
       - name: Clean up customer data
         if: always()
         run: |
           rm -f tourism.csv
           rm -rf private-data
-          rm -rf artifacts/processed
