@@ -3,6 +3,12 @@ name: Tourism ML Pipeline
 # Run manually from GitHub Actions.
 on:
   workflow_dispatch:
+    inputs:
+      publish_model:
+        description: "Publish trained model to private registry?"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -82,6 +88,14 @@ jobs:
           echo "ML pipeline completed successfully."
 
       # 12. Remove customer-level data from runner.
+
+      # Publish only when explicitly selected.
+      - name: Publish versioned model
+        if: ${{ inputs.publish_model == true }}
+        env:
+          MODEL_REGISTRY_TOKEN: ${{ secrets.MODEL_REGISTRY_TOKEN }}
+        run: python publish_model.py
+
       - name: Clean up customer data
         if: always()
         run: |
