@@ -1,6 +1,6 @@
 name: Tourism ML Pipeline
 
-# Manual execution from GitHub Actions.
+# Run manually from GitHub Actions.
 on:
   workflow_dispatch:
 
@@ -12,32 +12,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # STEP 1: Download public source code.
+      # 1. Retrieve public source code.
       - name: Checkout public repository
         uses: actions/checkout@v4
 
-      # STEP 2: Configure Python.
+      # 2. Configure Python environment.
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # STEP 3: Install dependencies.
+      # 3. Install required Python libraries.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      # STEP 4: Verify source-code files.
-      - name: Verify project files
-        run: |
-          test -f data_register.py
-          test -f prep.py
-          test -f train.py
-          test -f evaluate.py
-          test -f mlflow_tracking.py
-
-      # STEP 5: Securely retrieve the private dataset.
+      # 4. Download the dataset securely.
       - name: Checkout private dataset
         uses: actions/checkout@v4
         with:
@@ -47,27 +38,44 @@ jobs:
           path: private-data
           persist-credentials: false
 
-      # STEP 6: Place CSV where our Python script expects it.
+      # 5. Copy dataset to expected input location.
       - name: Prepare dataset
         run: |
           test -f private-data/tourism.csv
           cp private-data/tourism.csv tourism.csv
-          echo "Dataset successfully retrieved."
 
-      # STEP 7: Execute dataset registration.
+      # 6. Register and validate original dataset.
       - name: Register dataset
-        run: |
-          python data_register.py
+        run: python data_register.py
 
-      # STEP 8: Verify registration artifact.
-      - name: Verify registration result
+      # 7. Clean data and create train/test splits.
+      - name: Preprocess dataset
+        run: python prep.py
+
+      # 8. Train and compare candidate models.
+      - name: Train models
+        run: python train.py
+
+      # 9. Evaluate selected model on test data.
+      - name: Evaluate model
+        run: python evaluate.py
+
+      # 10. Log experiment information to MLflow.
+      - name: Track experiments
+        run: python mlflow_tracking.py
+
+      # 11. Check that important outputs exist.
+      - name: Verify pipeline outputs
         run: |
           test -f artifacts/dataset_metadata.json
-          echo "Dataset registration completed successfully."
+          test -f artifacts/models/best_tourism_model.joblib
+          test -f artifacts/models/model_comparison.csv
+          echo "ML pipeline completed successfully."
 
-      # STEP 9: Remove local dataset copies.
+      # 12. Remove customer-level data from runner.
       - name: Clean up customer data
         if: always()
         run: |
           rm -f tourism.csv
           rm -rf private-data
+          rm -rf artifacts/processed
